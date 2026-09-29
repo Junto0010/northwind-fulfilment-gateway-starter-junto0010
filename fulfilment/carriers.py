@@ -15,7 +15,13 @@ class FlatRateCarrier:
         """A deterministic local stand-in for a network carrier."""
         return 500 + quantity * 125
 
+    class juntoCarrier:
+        async def quote(self, destination: str, quantity: int) -> int:
+            """A deterministic local stand-in for a network carrier."""
+            return 600 + quantity * 125
+
 
 def build_carriers() -> dict[str, Carrier]:
     """TODO: return the configured carrier strategies keyed by public name."""
-    return {"flat-rate": FlatRateCarrier()}
+    
+    return {"flat-rate": FlatRateCarrier(), "junto": FlatRateCarrier.juntoCarrier()}

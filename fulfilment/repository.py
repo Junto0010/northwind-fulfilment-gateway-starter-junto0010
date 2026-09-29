@@ -18,8 +18,38 @@ class ShipmentRepository:
 
     def save(self, shipment: Shipment) -> None:
         """TODO: persist a shipment and its lines atomically using placeholders."""
-        raise NotImplementedError
+        with self.connection:
+            self.connection.execute(
+                "INSERT INTO shipments VALUES (?, ?, ?, ?, ?)",
+                (shipment.id, shipment.customer_id, shipment.destination, shipment.carrier, shipment.quote_cents)
+            )
+            self.connection.executemany(
+                "INSERT INTO shipment_lines (shipment_id, sku, quantity) VALUES (?, ?, ?)",
+                ((shipment.id, line.sku, line.quantity) for line in shipment.lines),
+            )
 
     def get_for_customer(self, shipment_id: str, customer_id: str) -> Shipment | None:
         """TODO: return only a shipment owned by customer_id; use parameterised SQL."""
-        raise NotImplementedError
+        shipment_row = self.connection.execute(
+            "SELECT id, customer_id, destination, carrier, quote_cents "
+            "FROM shipments WHERE id = ? AND customer_id = ?",
+            (shipment_id, customer_id),
+        ).fetchone()
+        if shipment_row is None:
+            return None
+        lines = tuple(
+            ShipmentLine(sku, quantity)
+            for sku, quantity in self.connection.execute(
+                "SELECT sku, quantity FROM shipment_lines WHERE shipment_id = ? ORDER BY rowid",
+                (shipment_id,),
+            )
+        )
+        return Shipment(
+            id=shipment_row[0],
+            customer_id=shipment_row[1],
+            destination=shipment_row[2],
+            lines=lines,
+            carrier=shipment_row[3],
+            quote_cents=shipment_row[4],
+        )
+    
